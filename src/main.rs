@@ -3,6 +3,7 @@ use dotenv::dotenv;
 use serde::Deserialize;
 use sqlx::{migrate, PgPool};
 
+mod models;
 mod routes;
 
 const API_VERSION: &str = "v1";
