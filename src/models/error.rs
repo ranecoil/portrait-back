@@ -11,3 +11,10 @@ pub enum Error {
     #[error("ALREADY_EXISTS")]
     AlreadyExists,
 }
+
+
+impl Into<Result<(), anyhow::Error>> for Error {
+    fn into(self) -> Result<(), anyhow::Error> {
+        return Err(self.into())
+    }
+}
