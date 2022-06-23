@@ -25,13 +25,21 @@ impl ResponseError for ErrorResponse {
         let status;
 
         if let Some(error) = source.downcast_ref::<ApiError>() {
+            // Backend-native error
             status = match *error {
                 ApiError::AlreadyExists => StatusCode::CONFLICT,
                 ApiError::InternalServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 ApiError::NotFound => StatusCode::NOT_FOUND,
                 ApiError::Unauthorized => StatusCode::UNAUTHORIZED,
             }
+        } else if let Some(error) = source.downcast_ref::<sqlx::Error>() {
+            // SQLx error
+            status = match *error {
+                sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            }
         } else {
+            // Error has not been handled
             status = StatusCode::INTERNAL_SERVER_ERROR
         }
 
