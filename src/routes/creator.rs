@@ -1,14 +1,9 @@
-use actix_web::{web, HttpResponse, Responder};
-use argon2::{Argon2, PasswordHasher, password_hash::SaltString};
+use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    models::{
-        creator::Creator,
-        error::{ApiError, ErrorResponse},
-        session::Session,
-    },
+    models::{creator::Creator, error::ErrorResponse, session::Session},
     State,
 };
 
@@ -63,12 +58,27 @@ pub struct UpdateUserRequest {
     pub pfp: Option<String>,
 }
 
-pub async fn update(session: Session, req: web::Json<UpdateUserRequest>, state: web::Data<State>) -> Result<HttpResponse, ErrorResponse> {
-    Creator::update(&session.subject, req.email.as_ref(), &req.password, req.new_password.as_ref(), req.pfp.as_ref(), &state.db).await?;
+pub async fn update(
+    session: Session,
+    req: web::Json<UpdateUserRequest>,
+    state: web::Data<State>,
+) -> Result<HttpResponse, ErrorResponse> {
+    Creator::update(
+        &session.subject,
+        req.email.as_ref(),
+        &req.password,
+        req.new_password.as_ref(),
+        req.pfp.as_ref(),
+        &state.db,
+    )
+    .await?;
     Ok(HttpResponse::Ok().finish())
 }
 
-pub async fn delete(session: Session, state: web::Data<State>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn delete(
+    session: Session,
+    state: web::Data<State>,
+) -> Result<HttpResponse, ErrorResponse> {
     Creator::delete_by_id(&session.subject, &state.db).await?;
     let res = HttpResponse::NoContent().finish();
     Ok(res)

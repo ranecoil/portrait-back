@@ -1,7 +1,7 @@
 use std::{future::Future, pin::Pin};
 
 use crate::{models::error::ErrorResponse, State};
-use actix_web::{error::HttpError, FromRequest, web::Data};
+use actix_web::{web::Data, FromRequest};
 use chrono::{DateTime, Utc};
 use sqlx::{query, query_as, FromRow, PgPool};
 use uuid::Uuid;
@@ -96,7 +96,8 @@ impl FromRequest for Session {
         Box::pin(async move {
             if let Some(token) = req.headers().get("Authorization") {
                 let token = token.to_str().map_err(|_e| ApiError::Unauthorized)?;
-                let token = Uuid::parse_str(token.strip_prefix("Bearer ").unwrap_or(token)).or(Err(ApiError::Unauthorized))?;
+                let token = Uuid::parse_str(token.strip_prefix("Bearer ").unwrap_or(token))
+                    .or(Err(ApiError::Unauthorized))?;
                 let data = req.app_data::<Data<State>>().expect("App Data missing");
                 let session = Session::get_by_token(token, &data.db).await?;
                 Ok(session)

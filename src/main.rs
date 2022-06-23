@@ -1,4 +1,7 @@
-use actix_web::{web::{self, Data}, App, HttpServer};
+use actix_web::{
+    web::{self, Data},
+    App, HttpServer,
+};
 use dotenv::dotenv;
 use serde::Deserialize;
 use sqlx::{migrate, PgPool};

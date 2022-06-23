@@ -1,10 +1,9 @@
-use crate::models::error::ApiError;
 use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
 use chrono::{DateTime, Utc};
-use sqlx::{query_as, FromRow, PgPool, query};
+use sqlx::{query, query_as, FromRow, PgPool};
 use uuid::Uuid;
 
 #[derive(FromRow)]
@@ -78,7 +77,11 @@ impl Creator {
     }
 
     /// Verify a creators password by their name
-    pub async fn verify_by_name(name: String, password: &String, db: &PgPool) -> anyhow::Result<()> {
+    pub async fn verify_by_name(
+        name: String,
+        password: &String,
+        db: &PgPool,
+    ) -> anyhow::Result<()> {
         Self::get_by_name(name, db).await?.verify(password)
     }
 
@@ -93,27 +96,39 @@ impl Creator {
 
     fn verify(&self, password: &String) -> anyhow::Result<()> {
         Ok(Argon2::default()
-            .verify_password(&password.as_bytes(), &PasswordHash::new(&self.pw_hash)?)?)
+            .verify_password(password.as_bytes(), &PasswordHash::new(&self.pw_hash)?)?)
     }
 
-    pub async fn update(creator: &Uuid, email: Option<&String>, password: &String, new_password: Option<&String>, pfp: Option<&String>, db: &PgPool) -> anyhow::Result<Creator> {
-        Creator::verify_by_id(creator, &password, db).await?;
+    pub async fn update(
+        creator: &Uuid,
+        email: Option<&String>,
+        password: &String,
+        new_password: Option<&String>,
+        pfp: Option<&String>,
+        db: &PgPool,
+    ) -> anyhow::Result<Creator> {
+        Creator::verify_by_id(creator, password, db).await?;
 
         // hash new password if present
-        let pw_hash: Option<String> = None;
-        if let Some(pw) = &new_password {
-            let salt = SaltString::generate(&mut OsRng);
-            let pw_hash = Argon2::default()
-                .hash_password(&password.as_bytes(), &salt)?
-                .to_string();
-        }
-    
+        let pw_hash = match new_password {
+            Some(pw) => {
+                let salt = SaltString::generate(&mut OsRng);
+                let hash = Argon2::default()
+                    .hash_password(pw.as_bytes(), &salt)?
+                    .to_string();
+                Some(hash)
+            }
+            None => None,
+        };
+
         let x = query_as!(Creator, "UPDATE creators SET email = COALESCE($2, name), pfp = COALESCE($3, pfp), pw_hash = COALESCE($4, pw_hash) WHERE id = $1 RETURNING *", creator, email, pfp, pw_hash).fetch_one(db).await?;
         Ok(x)
     }
 
     pub async fn delete_by_id(id: &Uuid, db: &PgPool) -> anyhow::Result<()> {
-        query!("DELETE FROM creators WHERE id = $1", id).execute(db).await?;
+        query!("DELETE FROM creators WHERE id = $1", id)
+            .execute(db)
+            .await?;
         Ok(())
     }
 }
