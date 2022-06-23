@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer};
+use actix_web::{web::{self, Data}, App, HttpServer};
 use dotenv::dotenv;
 use serde::Deserialize;
 use sqlx::{migrate, PgPool};
@@ -44,8 +44,12 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-            .app_data(state.clone())
+            .app_data(Data::new(state.clone()))
             .route("/version", web::get().to(routes::get_version))
+            .route("/creator/signup", web::post().to(routes::creator::register))
+            .route("/creator/login", web::post().to(routes::creator::login))
+            .route("/creator/update", web::post().to(routes::creator::update))
+            .route("/creator/delete", web::delete().to(routes::creator::delete))
     })
     .bind(config.host_uri)?
     .run()

@@ -4,7 +4,7 @@ use argon2::{
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
 use chrono::{DateTime, Utc};
-use sqlx::{query_as, FromRow, PgPool};
+use sqlx::{query_as, FromRow, PgPool, query};
 use uuid::Uuid;
 
 #[derive(FromRow)]
@@ -20,16 +20,16 @@ pub struct Creator {
 impl Creator {
     /// Create a new creator
     pub async fn new(
-        name: String,
-        email: String,
+        name: &String,
+        email: &String,
         pfp: Option<String>,
-        password: String,
+        password: &String,
         db: &PgPool,
     ) -> anyhow::Result<Self> {
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
         let pw_hash = argon2
-            .hash_password(&password.into_bytes(), &salt)?
+            .hash_password(&password.to_owned().into_bytes(), &salt)?
             .to_string();
 
         let creator = query_as!(
@@ -73,23 +73,47 @@ impl Creator {
         Ok(creator)
     }
 
+    pub async fn verify_by_id(id: &Uuid, password: &String, db: &PgPool) -> anyhow::Result<()> {
+        Self::get_by_id(*id, db).await?.verify(password)
+    }
+
     /// Verify a creators password by their name
-    pub async fn verify_by_name(name: String, password: String, db: &PgPool) -> anyhow::Result<()> {
+    pub async fn verify_by_name(name: String, password: &String, db: &PgPool) -> anyhow::Result<()> {
         Self::get_by_name(name, db).await?.verify(password)
     }
 
     /// Verify a creators password by their email
     pub async fn verify_by_email(
         email: String,
-        password: String,
+        password: &String,
         db: &PgPool,
     ) -> anyhow::Result<()> {
         Self::get_by_email(email, db).await?.verify(password)
     }
 
-    fn verify(&self, password: String) -> anyhow::Result<()> {
+    fn verify(&self, password: &String) -> anyhow::Result<()> {
         Ok(Argon2::default()
-            .verify_password(&password.into_bytes(), &PasswordHash::new(&self.pw_hash)?)?)
+            .verify_password(&password.as_bytes(), &PasswordHash::new(&self.pw_hash)?)?)
+    }
+
+    pub async fn update(creator: &Uuid, email: Option<&String>, password: &String, new_password: Option<&String>, pfp: Option<&String>, db: &PgPool) -> anyhow::Result<Creator> {
+        Creator::verify_by_id(creator, &password, db).await?;
+
+        // hash new password if present
+        let pw_hash: Option<String> = None;
+        if let Some(pw) = &new_password {
+            let salt = SaltString::generate(&mut OsRng);
+            let pw_hash = Argon2::default()
+                .hash_password(&password.as_bytes(), &salt)?
+                .to_string();
+        }
+    
+        let x = query_as!(Creator, "UPDATE creators SET email = COALESCE($2, name), pfp = COALESCE($3, pfp), pw_hash = COALESCE($4, pw_hash) WHERE id = $1 RETURNING *", creator, email, pfp, pw_hash).fetch_one(db).await?;
+        Ok(x)
+    }
+
+    pub async fn delete_by_id(id: &Uuid, db: &PgPool) -> anyhow::Result<()> {
+        query!("DELETE FROM creators WHERE id = $1", id).execute(db).await?;
+        Ok(())
     }
 }
-

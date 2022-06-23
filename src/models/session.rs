@@ -1,10 +1,12 @@
 use std::{future::Future, pin::Pin};
 
-use crate::models::error::ErrorResponse;
-use actix_web::{error::HttpError, FromRequest};
+use crate::{models::error::ErrorResponse, State};
+use actix_web::{error::HttpError, FromRequest, web::Data};
 use chrono::{DateTime, Utc};
 use sqlx::{query, query_as, FromRow, PgPool};
 use uuid::Uuid;
+
+use super::error::ApiError;
 
 #[derive(FromRow)]
 pub struct Session {
@@ -88,9 +90,19 @@ impl FromRequest for Session {
 
     fn from_request(
         req: &actix_web::HttpRequest,
-        payload: &mut actix_web::dev::Payload,
+        _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
-        todo!()
+        let req = req.clone();
+        Box::pin(async move {
+            if let Some(token) = req.headers().get("Authorization") {
+                let token = token.to_str().map_err(|_e| ApiError::Unauthorized)?;
+                let token = Uuid::parse_str(token.strip_prefix("Bearer ").unwrap_or(token)).or(Err(ApiError::Unauthorized))?;
+                let data = req.app_data::<Data<State>>().expect("App Data missing");
+                let session = Session::get_by_token(token, &data.db).await?;
+                Ok(session)
+            } else {
+                Err(ApiError::Unauthorized.into())
+            }
+        })
     }
 }
-

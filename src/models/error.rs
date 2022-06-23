@@ -50,3 +50,15 @@ impl ResponseError for ErrorResponse {
         HttpResponse::new(self.status_code())
     }
 }
+
+impl From<anyhow::Error> for ErrorResponse {
+    fn from(err: anyhow::Error) -> Self {
+        Self { source: err }
+    }
+}
+
+impl From<ApiError> for ErrorResponse {
+    fn from(err: ApiError) -> Self {
+        Self { source: err.into() }
+    }
+}
