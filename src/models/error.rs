@@ -1,4 +1,5 @@
 use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
+use std::fmt::{self, Display, Formatter};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -13,15 +14,30 @@ pub enum ApiError {
     Unauthorized,
 }
 
-#[derive(Debug, Error)]
-#[error("{source}")]
+#[derive(Debug)]
 pub struct ErrorResponse {
-    source: anyhow::Error,
+    inner: anyhow::Error,
+}
+
+impl Display for ErrorResponse {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+impl<E> From<E> for ErrorResponse
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(error: E) -> Self {
+        let inner = error.into();
+        ErrorResponse { inner }
+    }
 }
 
 impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
-        let source = &self.source;
+        let source = &self.inner;
         let status;
 
         if let Some(error) = source.downcast_ref::<ApiError>() {
@@ -48,17 +64,5 @@ impl ResponseError for ErrorResponse {
 
     fn error_response(&self) -> HttpResponse<BoxBody> {
         HttpResponse::new(self.status_code())
-    }
-}
-
-impl From<anyhow::Error> for ErrorResponse {
-    fn from(err: anyhow::Error) -> Self {
-        Self { source: err }
-    }
-}
-
-impl From<ApiError> for ErrorResponse {
-    fn from(err: ApiError) -> Self {
-        Self { source: err.into() }
     }
 }
