@@ -7,7 +7,7 @@ pub enum ApiError {
     #[error("ALREADY_EXISTS")]
     AlreadyExists,
     #[error("INTERNAL_SERVER_ERROR")]
-    InternalServerError(anyhow::Error),
+    InternalServerError,
     #[error("NOT_FOUND")]
     NotFound,
     #[error("UNAUTHORIZED")]
@@ -44,7 +44,7 @@ impl ResponseError for ErrorResponse {
             // Backend-native error
             status = match *error {
                 ApiError::AlreadyExists => StatusCode::CONFLICT,
-                ApiError::InternalServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
                 ApiError::NotFound => StatusCode::NOT_FOUND,
                 ApiError::Unauthorized => StatusCode::UNAUTHORIZED,
             }

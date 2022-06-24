@@ -1,12 +1,13 @@
-use std::{future::Future, pin::Pin};
-
-use crate::{models::error::ErrorResponse, State};
+use crate::{
+    models::error::{ApiError, ErrorResponse},
+    State,
+};
 use actix_web::{web::Data, FromRequest};
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use sqlx::{query, query_as, FromRow, PgPool};
+use std::{future::Future, pin::Pin};
 use uuid::Uuid;
-
-use super::error::ApiError;
 
 #[derive(FromRow)]
 pub struct Session {
@@ -29,8 +30,8 @@ impl Session {
         Ok(session)
     }
 
-    /// Fetch a session by its token.
-    pub async fn get_by_token(token: Uuid, db: &PgPool) -> anyhow::Result<Self> {
+    /// Get a session by its token.
+    pub async fn get(token: Uuid, db: &PgPool) -> anyhow::Result<Self> {
         let session = query_as!(Session, "SELECT * FROM sessions WHERE token = $1", token)
             .fetch_one(db)
             .await?;
@@ -93,17 +94,21 @@ impl FromRequest for Session {
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
         let req = req.clone();
+
         Box::pin(async move {
-            if let Some(token) = req.headers().get("Authorization") {
-                let token = token.to_str().map_err(|_e| ApiError::Unauthorized)?;
-                let token = Uuid::parse_str(token.strip_prefix("Bearer ").unwrap_or(token))
-                    .or(Err(ApiError::Unauthorized))?;
-                let data = req.app_data::<Data<State>>().expect("App Data missing");
-                let session = Session::get_by_token(token, &data.db).await?;
-                Ok(session)
-            } else {
-                Err(ApiError::Unauthorized.into())
-            }
+            let data = req.app_data::<Data<State>>().context("App Data missing")?;
+
+            let header = req
+                .headers()
+                .get("Authorization")
+                .ok_or(ApiError::Unauthorized)?
+                .to_str()
+                .context(ApiError::Unauthorized)?;
+
+            let token = Uuid::parse_str(header).context(ApiError::Unauthorized)?;
+            let session = Session::get(token, &data.db).await?;
+
+            Ok(session)
         })
     }
 }
