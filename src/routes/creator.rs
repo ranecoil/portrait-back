@@ -75,10 +75,17 @@ pub async fn update(
     Ok(HttpResponse::Ok().finish())
 }
 
+#[derive(Deserialize)]
+pub struct DeleteRequest {
+    pub password: String
+}
+
 pub async fn delete(
+    req: web::Json<DeleteRequest>,
     session: Session,
     state: web::Data<State>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    Creator::verify_by_id(&session.subject, &req.password, &state.db).await?;
     Creator::delete_by_id(&session.subject, &state.db).await?;
     let res = HttpResponse::NoContent().finish();
     Ok(res)
