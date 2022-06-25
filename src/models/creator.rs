@@ -6,7 +6,9 @@ use chrono::{DateTime, Utc};
 use sqlx::{query, query_as, FromRow, PgPool};
 use uuid::Uuid;
 
-#[derive(FromRow)]
+use super::error::ApiError;
+
+#[derive(FromRow, Debug)]
 pub struct Creator {
     pub id: Uuid,
     pub name: String,
@@ -95,8 +97,15 @@ impl Creator {
     }
 
     fn verify(&self, password: &String) -> anyhow::Result<()> {
-        Ok(Argon2::default()
-            .verify_password(password.as_bytes(), &PasswordHash::new(&self.pw_hash)?)?)
+        Argon2::default()
+            .verify_password(password.as_bytes(), &PasswordHash::new(&self.pw_hash)?)
+            .map_err(|e| {
+                match e {
+                    argon2::password_hash::Error::Password => ApiError::Unauthorized,
+                    _ => ApiError::InternalServerError
+                }
+            })?;
+        Ok(())
     }
 
     pub async fn update(

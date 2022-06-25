@@ -76,7 +76,7 @@ impl Session {
     /// Remove all of the subjects currently known sessions.
     ///
     /// This will not return the number of affected rows and there's currently no way to do that w\ adding a dedicated function.
-    pub async fn remove_by_subject(subject: Uuid, db: &PgPool) -> anyhow::Result<()> {
+    pub async fn remove_by_subject(subject: &Uuid, db: &PgPool) -> anyhow::Result<()> {
         query!("DELETE FROM sessions WHERE subject = $1", subject)
             .execute(db)
             .await?;

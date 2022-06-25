@@ -63,7 +63,7 @@ pub async fn update(
     req: web::Json<UpdateUserRequest>,
     state: web::Data<State>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    Creator::update(
+    let x = Creator::update(
         &session.subject,
         req.email.as_ref(),
         &req.password,
@@ -71,7 +71,8 @@ pub async fn update(
         req.pfp.as_ref(),
         &state.db,
     )
-    .await?;
+    .await;
+    dbg!(x);
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -86,6 +87,7 @@ pub async fn delete(
     state: web::Data<State>,
 ) -> Result<HttpResponse, ErrorResponse> {
     Creator::verify_by_id(&session.subject, &req.password, &state.db).await?;
+    Session::remove_by_subject(&session.subject, &state.db).await?;
     Creator::delete_by_id(&session.subject, &state.db).await?;
     let res = HttpResponse::NoContent().finish();
     Ok(res)
