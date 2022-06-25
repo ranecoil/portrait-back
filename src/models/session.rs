@@ -103,6 +103,8 @@ impl FromRequest for Session {
                 .get("Authorization")
                 .ok_or(ApiError::Unauthorized)?
                 .to_str()
+                .or(Err(ApiError::Unauthorized))?
+                .strip_prefix("Bearer ")
                 .context(ApiError::Unauthorized)?;
 
             let token = Uuid::parse_str(header).context(ApiError::Unauthorized)?;
