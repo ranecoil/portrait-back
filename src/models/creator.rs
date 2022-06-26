@@ -99,11 +99,9 @@ impl Creator {
     fn verify(&self, password: &String) -> anyhow::Result<()> {
         Argon2::default()
             .verify_password(password.as_bytes(), &PasswordHash::new(&self.pw_hash)?)
-            .map_err(|e| {
-                match e {
-                    argon2::password_hash::Error::Password => ApiError::Unauthorized,
-                    _ => ApiError::InternalServerError
-                }
+            .map_err(|e| match e {
+                argon2::password_hash::Error::Password => ApiError::Unauthorized,
+                _ => ApiError::InternalServerError,
             })?;
         Ok(())
     }

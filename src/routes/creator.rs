@@ -78,7 +78,7 @@ pub async fn update(
 
 #[derive(Deserialize)]
 pub struct DeleteRequest {
-    pub password: String
+    pub password: String,
 }
 
 pub async fn delete(
