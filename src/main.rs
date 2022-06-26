@@ -32,16 +32,15 @@ impl State {
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
-    let config = match envy::from_env::<Config>() {
-        Ok(config) => config,
-        Err(error) => panic!("{:#?}", error),
-    };
+    let config = envy::from_env::<Config>().expect("Couldn't load config from environment");
 
-    let db = PgPool::connect(&config.db_uri).await.unwrap();
+    let db = PgPool::connect(&config.db_uri)
+        .await
+        .expect("Couldn't connect to database");
     migrate!("./migrations/")
         .run(&db)
         .await
-        .expect("Couldn't run database migrations.");
+        .expect("Couldn't run database migrations");
 
     let state = State::new(db);
 
@@ -52,8 +51,8 @@ async fn main() -> std::io::Result<()> {
             .route("/creator/signup", web::post().to(routes::creator::register))
             .route("/creator/login", web::post().to(routes::creator::login))
             .route("/creator/update", web::post().to(routes::creator::update))
-            // currently locked for legal reasons (data preservation vs https://europa.eu/youreurope/citizens/consumers/internet-telecoms/data-protection-online-privacy/index_en.htm)
-            //.route("/creator/delete", web::delete().to(routes::creator::delete))
+        // currently locked for legal reasons (data preservation vs https://europa.eu/youreurope/citizens/consumers/internet-telecoms/data-protection-online-privacy/index_en.htm)
+        //.route("/creator/delete", web::delete().to(routes::creator::delete))
     })
     .bind(config.host_uri)?
     .run()
