@@ -6,6 +6,8 @@ use thiserror::Error;
 pub enum ApiError {
     #[error("ALREADY_EXISTS")]
     AlreadyExists,
+    #[error("BAD_REQUEST")]
+    BadRequest,
     #[error("INTERNAL_SERVER_ERROR")]
     InternalServerError,
     #[error("NOT_FOUND")]
@@ -44,6 +46,7 @@ impl ResponseError for ErrorResponse {
             // Backend-native error
             status = match *error {
                 ApiError::AlreadyExists => StatusCode::CONFLICT,
+                ApiError::BadRequest => StatusCode::BAD_REQUEST,
                 ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
                 ApiError::NotFound => StatusCode::NOT_FOUND,
                 ApiError::Unauthorized => StatusCode::UNAUTHORIZED,
