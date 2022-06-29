@@ -73,7 +73,6 @@ pub async fn update(
         &state.db,
     )
     .await;
-    dbg!(x);
     Ok(HttpResponse::Ok().finish())
 }
 

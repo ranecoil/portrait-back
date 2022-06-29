@@ -13,7 +13,6 @@ pub async fn extract_multipart_data(mut payload: Multipart) -> Result<Vec<u8>, A
             }
         },
         Err(e) => {
-            dbg!(e);
             return Err(ApiError::BadRequest.into());
         }
     };
