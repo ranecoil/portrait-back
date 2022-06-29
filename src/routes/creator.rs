@@ -1,9 +1,10 @@
-use actix_web::{web, HttpResponse};
+use actix_multipart::Multipart;
+use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    models::{creator::Creator, error::ErrorResponse, session::Session},
+    models::{creator::Creator, error::{ErrorResponse, ApiError}, session::Session, s3::{extract_multipart_data, upload}},
     State,
 };
 
@@ -75,6 +76,32 @@ pub async fn update(
     dbg!(x);
     Ok(HttpResponse::Ok().finish())
 }
+
+pub async fn upload_pfp(
+    session: Session,
+    payload: Multipart,
+    state: web::Data<State>,
+) -> Result<impl Responder, ErrorResponse> {
+    let data = extract_multipart_data(payload).await?;
+
+    // reject if payload is larger than 3mb
+    if (data.len() / 1024 / 1024) > 3 {
+        return Err(ApiError::BadRequest.into())
+    }
+
+    upload(
+        data,
+        &state.s3_client,
+        &state.s3_bucket_name,
+        format!("pfp-{}", session.subject),
+        "pfp",
+        // only permit webp and png files => TODO: jpg to png conversion?
+        Some(vec!["image/webp", "image/png"])
+    )
+    .await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
 
 #[derive(Deserialize)]
 pub struct DeleteRequest {

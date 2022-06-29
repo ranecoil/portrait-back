@@ -2,9 +2,9 @@ use actix_multipart::Multipart;
 use aws_sdk_s3::Client;
 use tokio_stream::StreamExt;
 
-use super::error::{ErrorResponse, ApiError};
+use super::error::{ApiError, ErrorResponse};
 
-pub async fn upload(mut payload: Multipart, client: &Client, bucket_name: &String, mut key: String, kind: &str) -> Result<(), ErrorResponse> {
+pub async fn extract_multipart_data(mut payload: Multipart) -> Result<Vec<u8>, ApiError> {
     let mut field = match payload.try_next().await {
         Ok(field) => match field {
             Some(field) => field,
@@ -23,15 +23,24 @@ pub async fn upload(mut payload: Multipart, client: &Client, bucket_name: &Strin
         data.append(&mut x.to_vec());
     }
 
+    Ok(data)
+}
+
+pub async fn upload(
+    data: Vec<u8>,
+    client: &Client,
+    bucket_name: &String,
+    mut key: String,
+    kind: &str,
+    allowed_content: Option<Vec<&str>>
+) -> Result<(), ErrorResponse> {
     let mime_type = infer::get(&data).ok_or(ApiError::BadRequest)?;
     let mime_string = mime_type.to_string();
-
-    // only permit webp and png files => TODO: jpg to png conversion?
-    if !(mime_string.eq("image/webp") || mime_string.eq("image/png")) {
-        return Err(ApiError::BadRequest.into());
-    } else if (data.len() / 1024 / 1024) > 3 {
-        // check file size > ~3mb
-        return Err(ApiError::BadRequest.into());
+    
+    if let Some(types) = allowed_content {
+        if !types.contains(&mime_string.as_str()) {
+            return Err(ApiError::BadRequest.into());
+        }
     }
 
     // append correct file extension if not present
@@ -48,8 +57,6 @@ pub async fn upload(mut payload: Multipart, client: &Client, bucket_name: &Strin
         .metadata("pp-type", kind)
         .send()
         .await
-        .map_err(|_| {
-            ApiError::InternalServerError
-        })?;
+        .map_err(|_| ApiError::InternalServerError)?;
     Ok(())
 }

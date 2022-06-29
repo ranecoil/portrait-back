@@ -88,7 +88,7 @@ async fn main() -> std::io::Result<()> {
             .route("/creator/signup", web::post().to(routes::creator::register))
             .route("/creator/login", web::post().to(routes::creator::login))
             .route("/creator/update", web::post().to(routes::creator::update))
-            .route("/creator/pfp", web::post().to(routes::upload::upload_pfp))
+            .route("/creator/pfp", web::post().to(routes::creator::upload_pfp))
         // currently locked for legal reasons (data preservation vs https://europa.eu/youreurope/citizens/consumers/internet-telecoms/data-protection-online-privacy/index_en.htm)
         //.route("/creator/delete", web::delete().to(routes::creator::delete))
     })
