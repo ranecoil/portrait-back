@@ -4,7 +4,12 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    models::{creator::Creator, error::{ErrorResponse, ApiError}, session::Session, s3::{extract_multipart_data, upload}},
+    models::{
+        creator::Creator,
+        error::{ApiError, ErrorResponse},
+        s3::{extract_multipart_data, upload},
+        session::Session,
+    },
     State,
 };
 
@@ -85,7 +90,7 @@ pub async fn upload_pfp(
 
     // reject if payload is larger than 3mb
     if (data.len() / 1024 / 1024) > 3 {
-        return Err(ApiError::BadRequest.into())
+        return Err(ApiError::BadRequest.into());
     }
 
     upload(
@@ -95,12 +100,11 @@ pub async fn upload_pfp(
         format!("pfp-{}", session.subject),
         "pfp",
         // only permit webp and png files => TODO: jpg to png conversion?
-        Some(vec!["image/webp", "image/png"])
+        Some(vec!["image/webp", "image/png"]),
     )
     .await?;
     Ok(HttpResponse::Ok().finish())
 }
-
 
 #[derive(Deserialize)]
 pub struct DeleteRequest {

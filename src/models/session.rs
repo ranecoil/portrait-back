@@ -1,13 +1,15 @@
-use crate::{
-    models::error::{ApiError, ErrorResponse},
-    State,
-};
+use std::{future::Future, pin::Pin};
+
 use actix_web::{web::Data, FromRequest};
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 use sqlx::{query, query_as, FromRow, PgPool};
-use std::{future::Future, pin::Pin};
 use uuid::Uuid;
+
+use crate::{
+    models::error::{ApiError, ErrorResponse},
+    State,
+};
 
 #[derive(FromRow)]
 pub struct Session {

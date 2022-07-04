@@ -2,7 +2,7 @@ use actix_multipart::Multipart;
 use aws_sdk_s3::Client;
 use tokio_stream::StreamExt;
 
-use super::error::{ApiError, ErrorResponse};
+use crate::models::error::{ApiError, ErrorResponse};
 
 pub async fn extract_multipart_data(mut payload: Multipart) -> Result<Vec<u8>, ApiError> {
     let mut field = match payload.try_next().await {
@@ -31,11 +31,11 @@ pub async fn upload(
     bucket_name: &String,
     mut key: String,
     kind: &str,
-    allowed_content: Option<Vec<&str>>
+    allowed_content: Option<Vec<&str>>,
 ) -> Result<(), ErrorResponse> {
     let mime_type = infer::get(&data).ok_or(ApiError::BadRequest)?;
     let mime_string = mime_type.to_string();
-    
+
     if let Some(types) = allowed_content {
         if !types.contains(&mime_string.as_str()) {
             return Err(ApiError::BadRequest.into());

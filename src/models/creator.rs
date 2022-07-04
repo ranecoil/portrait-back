@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{query, query_as, FromRow, PgPool};
 use uuid::Uuid;
 
-use super::error::ApiError;
+use crate::models::error::ApiError;
 
 #[derive(FromRow, Debug)]
 pub struct Creator {

@@ -1,5 +1,6 @@
-use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
 use std::fmt::{self, Display, Formatter};
+
+use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
