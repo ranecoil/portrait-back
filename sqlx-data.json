@@ -1,6 +1,6 @@
 {
   "db": "PostgreSQL",
-  "3382c9f369f1bc579796a364979037c94ab483812e058ea79048788455f9c83e": {
+  "37db43e7a8347de17326bc2176d2451906859065cdc52326e252b24902f94f75": {
     "describe": {
       "columns": [
         {
@@ -19,36 +19,38 @@
           "type_info": "Text"
         },
         {
-          "name": "pfp",
+          "name": "password",
           "ordinal": 3,
           "type_info": "Text"
         },
         {
-          "name": "pw_hash",
+          "name": "created",
           "ordinal": 4,
-          "type_info": "Text"
+          "type_info": "Timestamptz"
         },
         {
-          "name": "created",
+          "name": "picture",
           "ordinal": 5,
-          "type_info": "Timestamptz"
+          "type_info": "Uuid"
         }
       ],
       "nullable": [
         false,
         false,
         false,
-        true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
+          "Text",
+          "Text",
           "Text"
         ]
       }
     },
-    "query": "SELECT * FROM creators WHERE email = $1"
+    "query": "INSERT INTO creators (name, email, password) VALUES ($1, $2, $3) RETURNING *"
   },
   "42bd6f55f80404b0f20e0f325521f41573e4adf073306d4ce876304dc81a8e99": {
     "describe": {
@@ -177,28 +179,28 @@
           "type_info": "Text"
         },
         {
-          "name": "pfp",
+          "name": "password",
           "ordinal": 3,
           "type_info": "Text"
         },
         {
-          "name": "pw_hash",
+          "name": "created",
           "ordinal": 4,
-          "type_info": "Text"
+          "type_info": "Timestamptz"
         },
         {
-          "name": "created",
+          "name": "picture",
           "ordinal": 5,
-          "type_info": "Timestamptz"
+          "type_info": "Uuid"
         }
       ],
       "nullable": [
         false,
         false,
         false,
-        true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
@@ -207,58 +209,6 @@
       }
     },
     "query": "SELECT * FROM creators WHERE name = $1"
-  },
-  "7fa08f35368fd1a82fe418cd49d39192a6a9786fcf9efef3f13db383e4682e9d": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Uuid"
-        },
-        {
-          "name": "name",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "email",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "pfp",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "pw_hash",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "created",
-          "ordinal": 5,
-          "type_info": "Timestamptz"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Text",
-          "Uuid"
-        ]
-      }
-    },
-    "query": "UPDATE creators SET email = COALESCE($1, name), pw_hash = COALESCE($2, pw_hash) WHERE id = $3 RETURNING *"
   },
   "9dbbbf4c7d20b03211825b09e0bb688a3321ae99eac49d72688787110384b180": {
     "describe": {
@@ -279,28 +229,28 @@
           "type_info": "Text"
         },
         {
-          "name": "pfp",
+          "name": "password",
           "ordinal": 3,
           "type_info": "Text"
         },
         {
-          "name": "pw_hash",
+          "name": "created",
           "ordinal": 4,
-          "type_info": "Text"
+          "type_info": "Timestamptz"
         },
         {
-          "name": "created",
+          "name": "picture",
           "ordinal": 5,
-          "type_info": "Timestamptz"
+          "type_info": "Uuid"
         }
       ],
       "nullable": [
         false,
         false,
         false,
-        true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
@@ -322,7 +272,7 @@
     },
     "query": "DELETE FROM sessions WHERE token = $1"
   },
-  "d87c55345ff72bcd4cf524897bac3e4d3c8a0219bff1385ae6565bc387d01d48": {
+  "e746d40045528d75565b3d5ca7389ae858c890afc06a6a112a484ee7a8c65ff2": {
     "describe": {
       "columns": [
         {
@@ -341,50 +291,37 @@
           "type_info": "Text"
         },
         {
-          "name": "pfp",
+          "name": "password",
           "ordinal": 3,
           "type_info": "Text"
         },
         {
-          "name": "pw_hash",
+          "name": "created",
           "ordinal": 4,
-          "type_info": "Text"
+          "type_info": "Timestamptz"
         },
         {
-          "name": "created",
+          "name": "picture",
           "ordinal": 5,
-          "type_info": "Timestamptz"
+          "type_info": "Uuid"
         }
       ],
       "nullable": [
         false,
         false,
         false,
-        true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
           "Text",
           "Text",
-          "Text",
-          "Text"
-        ]
-      }
-    },
-    "query": "INSERT INTO creators (name, email, pfp, pw_hash) VALUES ($1, $2, $3, $4) RETURNING *"
-  },
-  "eea833ac3c909787ce0fcdbd7e4939d166a71a812087de7682c745ec5c7f4cff": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
           "Uuid"
         ]
       }
     },
-    "query": "DELETE FROM creators WHERE id = $1"
+    "query": "UPDATE creators SET email = COALESCE($1, name), password = COALESCE($2, password) WHERE id = $3 RETURNING *"
   }
 }

@@ -20,7 +20,7 @@ pub struct Session {
 
 impl Session {
     /// Create a new session for a given user.
-    pub async fn new(subject: Uuid, db: &PgPool) -> anyhow::Result<Self> {
+    pub async fn new(subject: &Uuid, db: &PgPool) -> anyhow::Result<Self> {
         let session = query_as!(
             Session,
             "INSERT INTO sessions (subject) VALUES ($1) RETURNING *",
@@ -33,7 +33,7 @@ impl Session {
     }
 
     /// Get a session by its token.
-    pub async fn get(token: Uuid, db: &PgPool) -> anyhow::Result<Self> {
+    pub async fn get(token: &Uuid, db: &PgPool) -> anyhow::Result<Self> {
         let session = query_as!(Session, "SELECT * FROM sessions WHERE token = $1", token)
             .fetch_one(db)
             .await?;
@@ -110,7 +110,7 @@ impl FromRequest for Session {
                 .context(ApiError::Unauthorized)?;
 
             let token = Uuid::parse_str(header).context(ApiError::Unauthorized)?;
-            let session = Session::get(token, &data.db).await?;
+            let session = Session::get(&token, &data.db).await?;
 
             Ok(session)
         })

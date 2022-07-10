@@ -1,6 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
 use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
+use argon2::password_hash;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -54,6 +55,12 @@ impl ResponseError for ErrorResponse {
                 ApiError::MultipartMissingData => StatusCode::BAD_REQUEST,
                 ApiError::NotFound => StatusCode::NOT_FOUND,
                 ApiError::Unauthorized => StatusCode::UNAUTHORIZED,
+            }
+        } else if let Some(error) = source.downcast_ref::<password_hash::Error>() {
+            // PasswordHash (from Argon2) error
+            status = match *error {
+                password_hash::Error::Password => StatusCode::UNAUTHORIZED,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
             }
         } else if let Some(error) = source.downcast_ref::<sqlx::Error>() {
             // SQLx error

@@ -69,9 +69,6 @@ async fn main() -> std::io::Result<()> {
                     .route("/sign_up", web::post().to(routes::creator::sign_up))
                     .route("/update", web::put().to(routes::creator::update)),
             )
-        // Creator
-        // currently locked for legal reasons (data preservation vs https://europa.eu/youreurope/citizens/consumers/internet-telecoms/data-protection-online-privacy/index_en.htm)
-        //.route("/creator/delete", web::delete().to(routes::creator::delete))
     })
     .bind(config.host_uri)?
     .run()

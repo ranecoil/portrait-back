@@ -46,7 +46,7 @@ where
 
                 file = Some(body);
             }
-            _ => ()
+            _ => (),
         }
     }
 
