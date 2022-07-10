@@ -16,7 +16,7 @@ const API_VERSION: &str = "v1";
 #[derive(Deserialize)]
 struct Config {
     host_uri: String,
-    db_uri: String,
+    database_url: String,
     s3_access_key: String,
     s3_secret_key: String,
     s3_endpoint: String,
@@ -41,7 +41,7 @@ async fn main() -> std::io::Result<()> {
 
     let config = envy::from_env::<Config>().expect("Couldn't load config from environment");
 
-    let db = PgPool::connect(&config.db_uri)
+    let db = PgPool::connect(&config.database_url)
         .await
         .expect("Couldn't connect to database");
     migrate!("./migrations/")
