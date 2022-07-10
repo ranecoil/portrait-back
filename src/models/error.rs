@@ -11,6 +11,8 @@ pub enum ApiError {
     BadRequest,
     #[error("INTERNAL_SERVER_ERROR")]
     InternalServerError,
+    #[error("MULTIPART_MISSING_DATA")]
+    MultipartMissingData,
     #[error("NOT_FOUND")]
     NotFound,
     #[error("UNAUTHORIZED")]
@@ -49,6 +51,7 @@ impl ResponseError for ErrorResponse {
                 ApiError::AlreadyExists => StatusCode::CONFLICT,
                 ApiError::BadRequest => StatusCode::BAD_REQUEST,
                 ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+                ApiError::MultipartMissingData => StatusCode::BAD_REQUEST,
                 ApiError::NotFound => StatusCode::NOT_FOUND,
                 ApiError::Unauthorized => StatusCode::UNAUTHORIZED,
             }

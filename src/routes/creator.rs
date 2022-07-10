@@ -1,15 +1,10 @@
 use actix_multipart::Multipart;
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    models::{
-        creator::Creator,
-        error::{ApiError, ErrorResponse},
-        s3::{extract_multipart_data, upload},
-        session::Session,
-    },
+    models::{creator::Creator, error::ErrorResponse, s3::split_json, session::Session},
     State,
 };
 
@@ -59,50 +54,25 @@ pub async fn register(
 #[derive(Deserialize)]
 pub struct UpdateUserRequest {
     pub email: Option<String>,
-    pub password: String,
-    pub new_password: Option<String>,
-    pub pfp: Option<String>,
+    pub password: Option<String>,
 }
 
 pub async fn update(
     session: Session,
-    req: web::Json<UpdateUserRequest>,
+    req: Multipart,
     state: web::Data<State>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let x = Creator::update(
+    let (data, picture): (UpdateUserRequest, _) = split_json(req).await?;
+
+    Creator::update(
         &session.subject,
-        req.email.as_ref(),
-        &req.password,
-        req.new_password.as_ref(),
-        req.pfp.as_ref(),
+        data.email.as_deref(),
+        data.password.as_deref(),
+        picture.as_ref(),
         &state.db,
     )
-    .await;
-    Ok(HttpResponse::Ok().finish())
-}
-
-pub async fn upload_pfp(
-    session: Session,
-    payload: Multipart,
-    state: web::Data<State>,
-) -> Result<impl Responder, ErrorResponse> {
-    let data = extract_multipart_data(payload).await?;
-
-    // reject if payload is larger than 3mb
-    if (data.len() / 1024 / 1024) > 3 {
-        return Err(ApiError::BadRequest.into());
-    }
-
-    upload(
-        data,
-        &state.s3_client,
-        &state.s3_bucket_name,
-        format!("pfp-{}", session.subject),
-        "pfp",
-        // only permit webp and png files => TODO: jpg to png conversion?
-        Some(vec!["image/webp", "image/png"]),
-    )
     .await?;
+
     Ok(HttpResponse::Ok().finish())
 }
 

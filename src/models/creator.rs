@@ -3,6 +3,7 @@ use argon2::{
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
 use chrono::{DateTime, Utc};
+use hyper::body::Body;
 use sqlx::{query, query_as, FromRow, PgPool};
 use uuid::Uuid;
 
@@ -107,29 +108,28 @@ impl Creator {
     }
 
     pub async fn update(
-        creator: &Uuid,
-        email: Option<&String>,
-        password: &String,
-        new_password: Option<&String>,
-        pfp: Option<&String>,
+        id: &Uuid,
+        email: Option<&str>,
+        password: Option<&str>,
+        picture: Option<&Body>,
         db: &PgPool,
     ) -> anyhow::Result<Creator> {
-        Creator::verify_by_id(creator, password, db).await?;
-
-        // hash new password if present
-        let pw_hash = match new_password {
-            Some(pw) => {
+        password
+            .map::<anyhow::Result<_>, _>(|p| {
                 let salt = SaltString::generate(&mut OsRng);
-                let hash = Argon2::default()
-                    .hash_password(pw.as_bytes(), &salt)?
-                    .to_string();
-                Some(hash)
-            }
-            None => None,
-        };
+                let argon2 = Argon2::default();
+                let pw_hash = argon2.hash_password(p.as_bytes(), &salt)?.to_string();
+                Ok(pw_hash)
+            })
+            .transpose()?;
 
-        let x = query_as!(Creator, "UPDATE creators SET email = COALESCE($2, name), pfp = COALESCE($3, pfp), pw_hash = COALESCE($4, pw_hash) WHERE id = $1 RETURNING *", creator, email, pfp, pw_hash).fetch_one(db).await?;
-        Ok(x)
+        let creator = query_as!(Creator,
+            "UPDATE creators SET email = COALESCE($1, name), pw_hash = COALESCE($2, pw_hash) WHERE id = $3 RETURNING *",
+            email, password, id)
+            .fetch_one(db)
+            .await?;
+
+        Ok(creator)
     }
 
     pub async fn delete_by_id(id: &Uuid, db: &PgPool) -> anyhow::Result<()> {

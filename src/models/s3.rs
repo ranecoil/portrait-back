@@ -1,61 +1,93 @@
 use actix_multipart::Multipart;
-use aws_sdk_s3::Client;
-use tokio_stream::StreamExt;
+use actix_web::rt;
+use aws_sdk_s3::{Client, Config, Credentials, Endpoint};
+use futures_util::{StreamExt, TryStreamExt};
+use hyper::Body;
+use serde::de::DeserializeOwned;
+use uuid::Uuid;
 
-use crate::models::error::{ApiError, ErrorResponse};
+use crate::models::error::ApiError;
 
-pub async fn extract_multipart_data(mut payload: Multipart) -> Result<Vec<u8>, ApiError> {
-    let mut field = match payload.try_next().await {
-        Ok(field) => match field {
-            Some(field) => field,
-            None => {
-                return Err(ApiError::InternalServerError.into());
+pub async fn split_json<D>(mut multipart: Multipart) -> anyhow::Result<(D, Option<Body>)>
+where
+    D: DeserializeOwned,
+{
+    let mut data = None;
+    let mut file = None;
+
+    while let Some(f) = multipart.next().await {
+        let mut field = f?;
+
+        match field.name() {
+            "data" => {
+                let json_slice = field
+                    .try_fold(Vec::new(), |mut acc, b| async move {
+                        acc.extend_from_slice(b.as_ref());
+                        Ok(acc)
+                    })
+                    .await?;
+
+                let json: D = serde_json::from_slice(&json_slice)?;
+                data = Some(json);
             }
-        },
-        Err(e) => {
-            return Err(ApiError::BadRequest.into());
+            "file" => {
+                let (mut sender, body) = Body::channel();
+
+                rt::spawn(async move {
+                    while let Some(b) = field.next().await {
+                        if let Ok(bytes) = b {
+                            sender.send_data(bytes).await.ok();
+                        } else {
+                            sender.abort();
+                            break;
+                        }
+                    }
+                });
+
+                file = Some(body);
+            }
+            _ => ()
         }
-    };
-    let mut data = Vec::new();
-    while let Some(chunk) = field.next().await {
-        let x: actix_web::web::Bytes = chunk.unwrap();
-        data.append(&mut x.to_vec());
     }
 
-    Ok(data)
+    Ok((data.ok_or(ApiError::MultipartMissingData)?, file))
 }
 
-pub async fn upload(
-    data: Vec<u8>,
-    client: &Client,
-    bucket_name: &String,
-    mut key: String,
-    kind: &str,
-    allowed_content: Option<Vec<&str>>,
-) -> Result<(), ErrorResponse> {
-    let mime_type = infer::get(&data).ok_or(ApiError::BadRequest)?;
-    let mime_string = mime_type.to_string();
+#[derive(Clone)]
+pub struct S3 {
+    bucket: String,
+    client: Client,
+}
 
-    if let Some(types) = allowed_content {
-        if !types.contains(&mime_string.as_str()) {
-            return Err(ApiError::BadRequest.into());
-        }
+impl S3 {
+    pub fn new(
+        access_key: &str,
+        secret_key: &str,
+        endpoint: &str,
+        bucket: &str,
+    ) -> anyhow::Result<Self> {
+        let config = Config::builder()
+            .credentials_provider(Credentials::new(
+                access_key, secret_key, None, None, "minio",
+            ))
+            .endpoint_resolver(Endpoint::immutable(endpoint.parse()?))
+            .build();
+
+        let bucket = bucket.to_string();
+        let client = Client::from_conf(config);
+        let s3 = S3 { bucket, client };
+
+        Ok(s3)
     }
 
-    // append correct file extension if not present
-    if !key.ends_with(mime_type.extension()) {
-        key = format!("{}.{}", key, mime_type.extension());
-    }
+    pub async fn put<B>(&self, file: Body, key: &Uuid) -> anyhow::Result<()> {
+        self.client
+            .put_object()
+            .body(file.into())
+            .key(key.to_string())
+            .send()
+            .await?;
 
-    client
-        .put_object()
-        .bucket(bucket_name)
-        .key(key)
-        .body(data.into())
-        .content_type(mime_string)
-        .metadata("pp-type", kind)
-        .send()
-        .await
-        .map_err(|_| ApiError::InternalServerError)?;
-    Ok(())
+        Ok(())
+    }
 }
