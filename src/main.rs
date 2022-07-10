@@ -63,10 +63,13 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(Data::new(state.clone()))
             .route("/version", web::get().to(routes::get_version))
-            // Creator
-            .route("/creator/signup", web::post().to(routes::creator::register))
-            .route("/creator/login", web::post().to(routes::creator::login))
-            .route("/creator/update", web::post().to(routes::creator::update))
+            .service(
+                web::scope("/creator")
+                    .route("/sign_in", web::post().to(routes::creator::sign_in))
+                    .route("/sign_up", web::post().to(routes::creator::sign_up))
+                    .route("/update", web::put().to(routes::creator::update)),
+            )
+        // Creator
         // currently locked for legal reasons (data preservation vs https://europa.eu/youreurope/citizens/consumers/internet-telecoms/data-protection-online-privacy/index_en.htm)
         //.route("/creator/delete", web::delete().to(routes::creator::delete))
     })

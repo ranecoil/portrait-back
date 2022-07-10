@@ -9,45 +9,45 @@ use crate::{
 };
 
 #[derive(Deserialize)]
-pub struct LoginRequest {
-    pub user_identifier: String,
+pub struct SignInRequest {
+    pub name: String,
     pub password: String,
 }
 
 #[derive(Serialize)]
-pub struct LoginResponse {
+pub struct SignInResponse {
     pub token: String,
 }
-pub async fn login(
-    req: web::Json<LoginRequest>,
+pub async fn sign_in(
+    req: web::Json<SignInRequest>,
     state: web::Data<State>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let creator = Creator::get_by_name(req.user_identifier.clone(), &state.db).await?;
-    let res = HttpResponse::Ok().json(LoginResponse {
+    let creator = Creator::get_by_name(req.name.clone(), &state.db).await?;
+    let res = HttpResponse::Ok().json(SignInResponse {
         token: Session::new(creator.id, &state.db).await?.token.to_string(),
     });
     Ok(res)
 }
 
 #[derive(Deserialize)]
-pub struct RegisterRequest {
-    pub username: String,
+pub struct SignUpRequest {
+    pub name: String,
     pub email: String,
     pub password: String,
 }
 
 #[derive(Serialize)]
-pub struct RegisterResponse {
+pub struct SignUpResponse {
     pub token: Uuid,
 }
 
-pub async fn register(
-    req: web::Json<RegisterRequest>,
+pub async fn sign_up(
+    req: web::Json<SignUpRequest>,
     state: web::Data<State>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let x = Creator::new(&req.username, &req.email, None, &req.password, &state.db).await?;
+    let x = Creator::new(&req.name, &req.email, None, &req.password, &state.db).await?;
     let token = Session::new(x.id, &state.db).await?.token;
-    let res = HttpResponse::Ok().json(RegisterResponse { token });
+    let res = HttpResponse::Ok().json(SignUpResponse { token });
     Ok(res)
 }
 
